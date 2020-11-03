@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "/Users/dipankarbhattacharya/knitro-12.1.1-MacOS-64/examples/Python/examples"
+		},
+		{
+			"path": "/Users/dipankarbhattacharya/knitro-12.1.1-MacOS-64"
+		}
+	],
+	"settings": {
+		"git.ignoreLimitWarning": true
+	}
+}

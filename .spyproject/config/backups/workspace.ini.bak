@@ -1,0 +1,10 @@
+[workspace]
+restore_data_on_startup = True
+save_data_on_exit = True
+save_history = True
+save_non_project_files = False
+
+[main]
+version = 0.2.0
+recent_files = ['QSR2Layer_ADC_SINDYc_discrete_using_PySINDY_MPC.py', 'LOTKA_SI_SINDYc_MPCv2_SLSQP.py', 'test_liveplotter.py']
+
