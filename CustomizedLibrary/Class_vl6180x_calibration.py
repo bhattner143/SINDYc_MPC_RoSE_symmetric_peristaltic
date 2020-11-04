@@ -155,14 +155,14 @@ class vl6180x_calibration(VL6180X):
         self._write_16(_VL6180X_SYSRANGE_RANGE_IGNORE_THRESHOL ,ignore_threshold)
         
     def range_offset_cal_data_load(self):
-        with open('/home/pi/Desktop/SINDYc_MPC_RoSE_symmetric/TOFCalFiles/range_offset_mm_all_tof_'+hex(self.vl6180x_new_address)+'.pickle', 'rb') as f:
+        with open('/home/pi/Desktop/SINDYc_MPC_RoSE_symmetric_peristaltic/TOFCalFiles/range_offset_mm_all_tof_'+hex(self.vl6180x_new_address)+'.pickle', 'rb') as f:
             range_offset_mm = pickle.load(f)
 #        print('Range offset',range_offset_mm)
         self._write_8(_VL6180X_REG_SYSRANGE_PART_TO_PART_RANGE_OFFSET, range_offset_mm)
         
     def range_crosstalk_cal_data_load(self,RangeIgnoreFlag=True):
         
-        with open('/home/pi/Desktop/SINDYc_MPC_RoSE_symmetric/TOFCalFiles/range_cross_talk_mcps_all_tof_'+hex(self.vl6180x_new_address)+'.pickle', 'rb') as f:
+        with open('/home/pi/Desktop/SINDYc_MPC_RoSE_symmetric_peristaltic/TOFCalFiles/range_cross_talk_mcps_all_tof_'+hex(self.vl6180x_new_address)+'.pickle', 'rb') as f:
             range_cross_talk_mcps=pickle.load(f)
         range_cross_talk_bits=int(round(range_cross_talk_mcps*128))
         self._write_16(_VL6180X_REG_SYSRANGE_CROSSTALK_COMPENSATION_RATE,range_cross_talk_bits)

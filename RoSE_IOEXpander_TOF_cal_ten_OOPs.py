@@ -258,7 +258,7 @@ class RoSE_actuation_protocol():
     #==============================================================================
     #     # If any data value is greater than cut_off then we are passing (0x00ff & 296)=40 to DAC
     #==============================================================================
-        cut_off=250
+        cut_off=260
     #converting dac address and data to unsigned 8 bit
         data8Bit=0x00ff & 296 #=40
         DAC_DATA=int(data8Bit)
@@ -397,7 +397,7 @@ class RoSE_actuation_protocol():
 
             filenameForSaving=filename[16:]
             dfTOFADCandPer=pd.DataFrame(SavingData)
-            filename2="CsvData29_09_2020/RoSEv2pt0_"+DataFrom+"_test_"+str(ScalingFactor)+"_"+\
+            filename2="CsvData04_11_2020/RoSEv2pt0_"+DataFrom+"_test_"+str(ScalingFactor)+"_"+\
                        filenameForSaving[0:]
                        #+filenameForSaving[6:12]+\
             dfTOFADCandPer.to_csv(filename2)
@@ -409,17 +409,17 @@ class RoSE_actuation_protocol():
             NumOfDataPts=PlottingData.shape[0]
             
         
-
+#        pdb.set_trace()
         InPoint=200
-        Num_of_plot=10
+        Num_of_plot=4
         ax=[]
-        for ii in range(1,Num_of_plot):
+        for ii in range(1,Num_of_plot+1):
             
             ax.append(fig.add_subplot(Num_of_plot,1,ii))
             
             ax[ii-1].plot(
                 #PlottingData[InPoint:NumOfDataPts,0],
-                PlottingData[InPoint:NumOfDataPts,ii],
+                PlottingData[InPoint:NumOfDataPts,ii+4],
                     color='red',
                     alpha=1,
                     linewidth=1.5,
@@ -525,7 +525,7 @@ if __name__ == '__main__':
                 
         QSR_Two_layer=RoSE_actuation_protocol(UseIOExpander=True,UseADC=True)
         Flag_UseFSP=True
-        Peristalsis_filepath='PeristalsisData/40mmat20mmps_Dips.csv'
+        Peristalsis_filepath='PeristalsisData/60mmat20mmps_Dips.csv'
         #Peristalsis_filepath='PeristalsisData/Peristalsis_Staircase_50_10_130_20mmps.csv'
 #        Peristalsis_filepath='PeristalsisData/Peristalsis_Staircase_60_100_130_20mmps.csv'
         dfFlipped=QSR_Two_layer.PeristalsisFileRead(Peristalsis_filepath)
@@ -578,7 +578,7 @@ if __name__ == '__main__':
             range_mm_array=QSR_Two_layer.GenerateDisplacementDataFromTOF(t1)
 
             #Design real-time filter
-            b,z=RoSE_actuation_protocol.Filter_RealTime_design()
+            b,z=RoSE_actuation_protocol.Filter_RealTime_design(numtaps=10,cutoff=0.1)
             z=(z,z,z,z,z,z,z,z,z,z)
             TOF2dArray_mean_filtered_stacked=np.array([[],[],[],[],[],[],[],[],[],[],[]]).T
             
@@ -594,7 +594,8 @@ if __name__ == '__main__':
             
             # create the hex version of df
 ##            dfHex=[hex(df[j,x]) for x in range(12)]
-
+#            if j==98:
+#                pdb.set_trace()
             dac_data_array=QSR_Two_layer.mergeDACadd2DataAndSend(dfFlipped,j,BaseLinePress,ScalingFact,size_df[1],40)
 
             if QSR_Two_layer.Flag_UseIOExpander is True and QSR_Two_layer.Flag_UseADC is False:
@@ -648,6 +649,7 @@ if __name__ == '__main__':
                 range_pressure_array=np.hstack((np.hstack((range_mm_array_mean,
                            range_mm_array_filtered[1:])),
                            pressure_kpa_array))
+                
                 range_pressure_peristalsis_array=np.hstack((range_pressure_array,dac_data_array[0,:]))
                 TOFADCPer2dArray=np.concatenate((TOFADCPer2dArray,range_pressure_peristalsis_array[np.newaxis,:]))
                 
@@ -734,7 +736,7 @@ if __name__ == '__main__':
                 # Save time-series tracked marker data
                 ColumnName=('time', 'A0','A1')
                 df_FSPADC2dArray=pd.DataFrame( FSPADC2dArray,columns=ColumnName)
-                filename="CsvData29_09_2020/RoSEv2pt0_test_FSP_"#+str(ScalingFactor)+"_"+\
+                filename="CsvData04_11_2020/RoSEv2pt0_test_FSP_"#+str(ScalingFactor)+"_"+\
                        #filenameForSaving[0:]
                 df_FSPADC2dArray.to_csv(filename)
                 
