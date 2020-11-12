@@ -593,7 +593,7 @@ class SINDYc_MPC_Design(SINDyBase,TOFandWebCam,RoSE_actuation_protocol):
     #  Generating data, SINDYc modeling and prediction function   
     # =============================================================================
     def DesignSINDYcModelForMPC(self,
-                                file_index=[0],
+                                file_index=[3],
                                 filter_params=None,
                                 N_train=500,
                                 threshold_vec=np.array([0.008])):  
@@ -619,7 +619,7 @@ class SINDYc_MPC_Design(SINDyBase,TOFandWebCam,RoSE_actuation_protocol):
                        
                  
         int_data=(270,270,270)
-        num_of_dt_pts=(1200,1200,1500)
+        num_of_dt_pts=(1200,1200,1200)
         
         #time span params
         time_scale_factor=10
@@ -639,13 +639,24 @@ class SINDYc_MPC_Design(SINDyBase,TOFandWebCam,RoSE_actuation_protocol):
         x_tof_online_fil_list= self.rob_data_dictionary['x_tof_online_fil_list']
         
         # =============================================================================
+        #  Applying TOF calibration obtained form WEbcam       
+        # =============================================================================
+        x_tof_online_fil_array=np.array(x_tof_online_fil_list)
+        
+        sf1=0.62+0.1
+        sf2=0.62+0.05
+        sf3=0.27+0.05
+
+        x_tof_online_fil_array=np.array([sf1,sf2,sf3])*(x_tof_online_fil_array\
+                                       -np.array([23,73,69]))+np.array([1,0,1])
+        # =============================================================================
         # Split training and test data
         # =============================================================================
         train_data_length=N_train
         split_factor=train_data_length/len(u_data_list)
         
         self.SplitData2TrainAndValid(u=np.array(u_data_list),
-                                                               x=np.array(x_adc_filtered_list),
+                                                               x=x_tof_online_fil_array,
                                                                tspan=np.array(t_data_list),
                                                                #x=x_tof_online_fil['1.0'],
                                                                split=split_factor,
@@ -656,9 +667,9 @@ class SINDYc_MPC_Design(SINDyBase,TOFandWebCam,RoSE_actuation_protocol):
         u_robot_test=self.DataDictionary['u_valid'][:,0:1]
         u_robot_valid=np.concatenate((u_robot_train,u_robot_test))
         
-        x_robot_adc_train=self.DataDictionary['x_train'][:,0:1]
-        x_robot_adc_test=self.DataDictionary['x_valid'][:,0:1]
-        x_robot_adc_valid=np.concatenate((x_robot_adc_train,x_robot_adc_test))
+        x_robot_tof_train=self.DataDictionary['x_train'][:,0:1]
+        x_robot_tof_test=self.DataDictionary['x_valid'][:,0:1]
+        x_robot_tof_valid=np.concatenate((x_robot_tof_train,x_robot_tof_test))
         
         tspan_robot_train=self.DataDictionary['tspan_train'][:,0:1]
         tspan_robot_test =self.DataDictionary['tspan_valid'][:,0:1]
@@ -865,7 +876,7 @@ try:
     # Path to Data directory and initialize the instant of SINDYc_MPC_Design class
     # =============================================================================
     GenPath = os.getcwd()
-    path = GenPath+"/DataFiles/Data20_10_2020_RoSE_layer_ADC/"
+    path = GenPath+"/DataFiles/Data04_11_2020_RoSE_states_3_TOF_modeling/"
     name = "TOFADCandPer"
     Bolustype = "Dry"
     RoSEv2pt0_Obj_SINDYc_SI = SINDYc_MPC_Design(path, 
@@ -880,13 +891,14 @@ try:
     RoSEv2pt0_Obj_SINDYc_SI.DesignSINDYcModelForMPC(threshold_vec=np.array([0.008]))
 
     # Choose prediction horizon over which the optimization is performed
-    Nvec=np.array([1])
+    Nvec=np.array([4])
     
     for i in range(Nvec.shape[0]):
         
-        Ts          = .1              # Sampling time
+        Ts          = .5              # Sampling time
         N           = Nvec[i]          # Control / prediction horizon (number of iterations)
-        Duration    = 73             # Run control for 100 time units
+        Duration    = 5*310.9#58             # Run control for 100 time units
+        #Duration    = 545.5#418             # Run control for 100 time units
         
         Q           = 1*np.array([5,10,5])            # State weights
         #Q=Q[np.newaxis,:]
@@ -898,26 +910,29 @@ try:
     #    D = 0                          # Feedforward (none)
         
         Ton      = 10                  # Time when control starts
+        
         #Trajectory shaping parameters
-        offset=66
-        scale_fact=(74-offset)/(74-66)
+        offset=0
+        scale_fact=(10-offset)/(10-0)
         
         # Reference state, which shall be achieved
         # Reference trajectory, which shall be achieved
-        xref_df_all1=pd.read_csv('ControllerReferenceFiles/Reference_traj_generated_7_9pt37mmps_40mm.csv')
-        xref_df_all2=pd.read_csv('ControllerReferenceFiles/Reference_traj_generated_8_9pt37mmps_60mm.csv')
-        xref_df_all3=pd.read_csv('ControllerReferenceFiles/Reference_traj_generated_6_9pt37mmps_80mm.csv')
+        #xref_df_all1=pd.read_csv('ControllerReferenceFiles/TOF_peristalsis/Reference_traj_generated_1_18pt75mmps_40mm.csv')
+#        xref_df_all1=pd.read_csv('ControllerReferenceFiles/TOF_peristalsis/Reference_traj_generated_1_18pt75mmps_40mm_cycles_50.csv')
+        #xref_df_all1=pd.read_csv('ControllerReferenceFiles/TOF_peristalsis/Reference_traj_generated_2_46pt87mmps_40mm_cycles_50.csv')
+        xref_df_all1=pd.read_csv('ControllerReferenceFiles/TOF_peristalsis/Reference_traj_generated_8_lam_6_delay_2_Ts_0.35_cycles_50.csv')
+#        xref_df_all3=pd.read_csv('ControllerReferenceFiles/Reference_traj_generated_6_9pt37mmps_80mm.csv')
         xref_all1=np.array(xref_df_all1)[:,3:]
-        xref_all2=np.array(xref_df_all2)[:,3:]
-        xref_all3=np.array(xref_df_all3)[0:,3:]
+#        xref_all2=np.array(xref_df_all2)[:,3:]
+#        xref_all3=np.array(xref_df_all3)[0:,3:]
         
-        xref_all3=scale_fact*(xref_all3-66)+offset
+#        xref_all3=scale_fact*(xref_all3-66)+offset
         
         xref0 = 0*np.ones((3,100))#int(Ton/Ts))) #Initial part of the reference where the control is off
 #        xref1 = xref_all[300:600,3:].T#2412:2542
 #        xref2 = xref_all[1200:1500,3:].T
 #        xref3 = xref_all[2550:2850,3:].T
-        xref_traj=np.concatenate((xref0.T,xref_all3
+        xref_traj=np.concatenate((xref0.T,xref_all1
 #                                  xref_all2,
 #                                  xref_all3[0:629,:]
                                   )).T
@@ -931,7 +946,7 @@ try:
         x        = x0n
         x=np.asarray(x).T
         
-        uopt0 = np.array([10,10,10])                   # Set initial control input to thirty
+        uopt0 = np.array([9,9,9])                   # Set initial control input to thirty
         uopt     = uopt0[:,np.newaxis]*np.ones((N_states,N))
         uopt=np.asarray(uopt)
         
@@ -939,11 +954,17 @@ try:
         xHistory = np.array([[],[],[]]).T       # Stores state history
         xfilteredHistory = np.array([[],[],[]]).T
         x_tofHistory=np.array([[],[],[]]).T 
-        x_tof_filteredHistory=np.array([[],[],[]]).T 
         uHistory = np.array([[],[],[]]).T  # Stores control history
         tHistory = np.array([])       # Stores time history
         rHistory = np.array([[],[],[]]).T   # Stores reference (could be trajectory and vary with time)
-        x_adc_all_raw_History = np.array([[],[],[],[],[],[],[],[],[],[],[],[]]).T
+        x_adc_filteredHistory=np.array([[],[],[]]).T
+        uopt_all_layers_array=np.array([[],[],[],
+                                        [],[],[],
+                                        [],[],[],
+                                        [],[],[]]).T
+                                              
+        d_stentHistory=np.array([[]]).T                                    
+
         #pdb.set_trace()
         
         # bound_optVar=[(LB,UB)]
@@ -954,19 +975,15 @@ try:
         BaseLinePress=np.zeros((1,12))
         ScalingFact=1.0
         num_rose_layers=12
-        uopt_all_deque=deque(np.zeros(12).tolist())
+        uopt_all_deque=deque(np.zeros(57).tolist())
         
-        #Filter Parameters ADC
+        #Filter Parameters
         numtaps_adc=10
-        cutoff=0.4
+        cutoff=0.1
         b_adc = signal.firwin(numtaps_adc, cutoff)
         z_adc = signal.lfilter_zi(b_adc, 1)
         z1=z2=z3=z_adc
         z_adc_packed=(z1,z2,z3)
-        
-        #Filter Parameters TOF
-        numtaps_tof=10
-        cutoff_tof=0.1
         
         #Initialize TOF 
         t1 = timedelta(minutes = 0, seconds = 0, microseconds=0)
@@ -979,7 +996,7 @@ try:
             range_mm_array=RoSEv2pt0_Obj_SINDYc_SI.GenerateDisplacementDataFromTOF(t1)
 
             #Design real-time filter
-            b,z=RoSE_actuation_protocol.Filter_RealTime_design(numtaps=numtaps_tof,cutoff=cutoff_tof)
+            b,z=RoSE_actuation_protocol.Filter_RealTime_design(numtaps=10,cutoff=0.1)
             z=(z,z,z,z,z,z,z,z,z,z)
             TOF2dArray_mean_filtered_stacked=np.array([[],[],[],[],[],[],[],[],[],[],[]]).T
             
@@ -996,7 +1013,7 @@ try:
         
         for ct in range(int(Duration/Ts)):
             
-            if ct*Ts>10:   # Turn control on
+            if ct*Ts>30:   # Turn control on
                 
                 if ct*Ts==Ton+Ts:
                     print('Start Control.')
@@ -1010,55 +1027,55 @@ try:
 #                if ct*Ts==40:
 #                    pdb.set_trace()
                 ################################    
-                if xref[0]>=72:
-                    LB1=45 #Lower bound
-                    UB1=50 #Upper bound
+                if xref[0]>=7.6:
+                    LB1=40 #Lower bound
+                    UB1=46 #Upper bound
                     
-                elif xref[0]>=70 and xref[0]<72.0:
+                elif xref[0]>=5.5 and xref[0]<7.6:
                     LB1=32 #Lower bound
-                    UB1=36 #Upper bound
+                    UB1=40 #Upper bound
                     
-                elif xref[0]>=67 and xref[0]<70:
-                    LB1=28 #Lower bound
-                    UB1=30 #Upper bound
+                elif xref[0]>=2 and xref[0]<5.5:
+                    LB1=24 #Lower bound
+                    UB1=32 #Upper bound
                     
-                elif xref[0]>=66 and xref[0]<67:
-                    LB1=23 #Lower bound
-                    UB1=25 #Upper bound
+#                elif xref[0]>=0 and xref[0]<2:
+#                    LB1=26-2 #Lower bound
+#                    UB1=30 #Upper bound
                 else:
                     LB1=9
                     UB1=17
                 #########################    
-                if xref[1]>=72.5:
-                    LB2=45 #Lower bound
-                    UB2=50 #Upper bound
+                if xref[1]>=8:
+                    LB2=42 #Lower bound
+                    UB2=46 #Upper bound
                     
-                elif xref[1]>=70 and xref[1]<72.5:
-                    LB2=32 #Lower bound
-                    UB2=36 #Upper bound
-                elif xref[1]>=68 and xref[1]<70:
-                    LB2=28 #Lower bound
-                    UB2=30  #Upper bound
+                elif xref[1]>=5.5 and xref[1]<8:
+                    LB2=34 #Lower bound
+                    UB2=40 #Upper bound
+                elif xref[1]>=2 and xref[1]<5.5:
+                    LB2=26 #Lower bound
+                    UB2=32  #Upper bound
                     
-                elif xref[1]>=66 and xref[1]<68:
-                    LB2=22 #Lower bound
-                    UB2=25  #Upper bound
+#                elif xref[1]>=66 and xref[1]<68:
+#                    LB2=22 #Lower bound
+#                    UB2=25  #Upper bound
                 else:
                     LB2=9
                     UB2=17
                  ###################################  
-                if xref[2]>=72.5:
-                    LB3=45 #Lower bound
-                    UB3=50 #Upper bound                    
-                elif xref[2]>=70 and xref[2]<72.5:
+                if xref[2]>=7.5:
+                    LB3=42 #Lower bound
+                    UB3=46 #Upper bound                    
+                elif xref[2]>=6.5 and xref[2]<7.5:
                     LB3=34 #Lower bound
-                    UB3=36 #Upper bound
-                elif xref[2]>=68 and xref[2]<70:
-                    LB3=28 #Lower bound
+                    UB3=38 #Upper bound
+                elif xref[2]>=5 and xref[2]<6.5:
+                    LB3=32 #Lower bound
+                    UB3=34 #Upper bound
+                elif xref[2]>=4 and xref[2]<5:
+                    LB3=26 #Lower bound
                     UB3=30 #Upper bound
-                elif xref[2]>=66 and xref[2]<68:
-                    LB3=20 #Lower bound
-                    UB3=25 #Upper bound
                 else:
                     LB3=9
                     UB3=17
@@ -1093,7 +1110,7 @@ try:
                 
                 funval[ct]=uopt.fun
                 
-                if np.absolute(x.any())>700:
+                if np.absolute(x.any())>12:
                     break
                 
                 uopt=uopt.x
@@ -1114,7 +1131,7 @@ try:
                 x_model=x[:,np.newaxis].T
                 
              #Apply input to RoSE
-#            if ct*Ts==40:
+#            if ct*Ts==15:
 #                pdb.set_trace()
 #            uopt_all_layers=np.zeros((1,12))
 #            uopt_all_layers[:,4:7]=uopt.T
@@ -1129,14 +1146,15 @@ try:
             uopt_all_deque.appendleft(uopt[0,0])
             uopt_all_deque.appendleft(0)
             
-
-            uopt_all_layers=np.asarray(uopt_all_deque)
+            u_deq_to_array=np.asarray(uopt_all_deque)
+            uopt_all_layers=u_deq_to_array[[0,1,2,3,19,20,21,36,37,38,54,55]]+3
             
             RoSEv2pt0_Obj_SINDYc_SI.mergeDACadd2DataAndSend(uopt_all_layers[:,np.newaxis].T,
                                           0,
                                           BaseLinePress,
                                           ScalingFact,
                                           num_rose_layers,0)
+            
             
             
 #            assert uopt.shape==(N_states,N),'For SINDYC model to work, the shape of the uopt must be N_states x N'
@@ -1186,19 +1204,39 @@ try:
             x_adc_filtered[0,0]=x_adc_filtered[0,0]+15-3
             x_adc_filtered[0,1]=x_adc_filtered[0,1]+15.5-3
             x_adc_filtered[0,2]=x_adc_filtered[0,2]+12-.5
-            x=x_adc_filtered
             
-            x_tof=np.array([range_mm_array[5:8]])
-            x_tof_filtered=np.array([range_mm_array_filtered[5:8]])
             
+            x_tof=np.array([range_mm_array[[5,6,7]]])
+            x_tof_filtered=np.array([range_mm_array_filtered[[5,6,7]]])
+            
+            d_stent=np.array([range_mm_array[[1]]])
+            
+            # =============================================================================
+            # Applying TOF calibration obtained form WEbcam
+            # =============================================================================
+            sf1=1#=0.62#+0.1
+            sf2=1#0.62#+0.05
+            sf3=0.5#0.27+0.05
+            
+            x_tof_filtered=np.array([sf1,sf2,sf3])*(x_tof_filtered-np.array([23,73,69]))+np.array([1,0,1])
+            #Additional offset tuning
+            x_tof_filtered[:,0]=x_tof_filtered[:,0]+1.6+2.2
+            x_tof_filtered[:,1]=x_tof_filtered[:,1]-3
+            x_tof_filtered[:,2]=x_tof_filtered[:,2]-2.7
+            
+            x=x_tof_filtered
             
             xHistory=np.concatenate((xHistory,x))
             xfilteredHistory=np.concatenate((xfilteredHistory,x))
-            x_tofHistory=np.concatenate((x_tofHistory,x_tof))
-            x_tof_filteredHistory=np.concatenate((x_tof_filteredHistory,x_tof_filtered))
+            x_tofHistory=np.concatenate((x_tofHistory,x_tof))#Unfiltered TOF data
             uHistory=np.vstack((uHistory,uopt[:,0]))
             tHistory = np.concatenate((tHistory,t_fi))
-            x_adc_all_raw_History = np.concatenate((x_adc_all_raw_History,pressure_kpa_array[:,np.newaxis].T))
+            x_adc_filteredHistory = np.concatenate((x_adc_filteredHistory,x_adc_filtered))#Filtered ADC for all layers
+            #saving all control data for all layers
+            uopt_all_layers_array=np.concatenate((uopt_all_layers_array,
+                                                  uopt_all_layers[:,np.newaxis].T))
+            #Stent displacement history
+            d_stentHistory=np.concatenate((d_stentHistory,d_stent))
         print("--- %s seconds ---" % (time.time() - start_time))
             
         # =============================================================================
@@ -1215,37 +1253,39 @@ try:
                   'x_tof_1':x_tofHistory[:,0],
                   'x_tof_2':x_tofHistory[:,1],
                   'x_tof_3':x_tofHistory[:,2],
-                  'x_tof_filtered_1':x_tof_filteredHistory[:,0],
-                  'x_tof_filtered_2':x_tof_filteredHistory[:,1],
-                  'x_tof_filtered_3':x_tof_filteredHistory[:,2],
+                  'x_adc_filtered_1':x_adc_filteredHistory[:,0],
+                  'x_adc_filtered_2':x_adc_filteredHistory[:,1],
+                  'x_adc_filtered_3':x_adc_filteredHistory[:,2],
                   'u_1':uHistory[:,0],  #1V-->50KPa and 1DAC-->0.0195V, 1DAC-->0.98KPa/step  
                   'u_2':uHistory[:,1], 
-                  'u_3':uHistory[:,2],                                     
-                  'J':funval,
-                  'x_adc_all_raw_History_1':x_adc_all_raw_History[:,0],
-                  'x_adc_all_raw_History_2':x_adc_all_raw_History[:,1],
-                  'x_adc_all_raw_History_3':x_adc_all_raw_History[:,2],
-                  'x_adc_all_raw_History_4':x_adc_all_raw_History[:,3],
-                  'x_adc_all_raw_History_5':x_adc_all_raw_History[:,4],
-                  'x_adc_all_raw_History_6':x_adc_all_raw_History[:,5],
-                  'x_adc_all_raw_History_7':x_adc_all_raw_History[:,6],
-                  'x_adc_all_raw_History_8':x_adc_all_raw_History[:,7],
-                  'x_adc_all_raw_History_9':x_adc_all_raw_History[:,8],
-                  'x_adc_all_raw_History_10':x_adc_all_raw_History[:,9],
-                  'x_adc_all_raw_History_11':x_adc_all_raw_History[:,10],
-                  'x_adc_all_raw_History_12':x_adc_all_raw_History[:,11],
+                  'u_3':uHistory[:,2], 
+                  'd_stent':d_stentHistory[:,0], 
+                  'J':funval
+#                  'x_adc_all_raw_History_1':x_adc_all_raw_History[:,0],
+#                  'x_adc_all_raw_History_2':x_adc_all_raw_History[:,1],
+#                  'x_adc_all_raw_History_3':x_adc_all_raw_History[:,2],
+#                  'x_adc_all_raw_History_4':x_adc_all_raw_History[:,3],
+#                  'x_adc_all_raw_History_5':x_adc_all_raw_History[:,4],
+#                  'x_adc_all_raw_History_6':x_adc_all_raw_History[:,5],
+#                  'x_adc_all_raw_History_7':x_adc_all_raw_History[:,6],
+#                  'x_adc_all_raw_History_8':x_adc_all_raw_History[:,7],
+#                  'x_adc_all_raw_History_9':x_adc_all_raw_History[:,8],
+#                  'x_adc_all_raw_History_10':x_adc_all_raw_History[:,9],
+#                  'x_adc_all_raw_History_11':x_adc_all_raw_History[:,10],
+#                  'x_adc_all_raw_History_12':x_adc_all_raw_History[:,11],
                         }
         
         History_df = pd.DataFrame(HistoryDict) 
-        History_df.to_csv('DataFiles/Data31_10_2020_Peristalsis_experiment_with_MPC/data_controller_6.csv')
+        History_df.to_csv('DataFiles/Data06_11_2020_Peristalsis_experiment_with_MPC_with_TOF/data_controller_1.csv')
         
         #              'JHistory':funval}
         
+        uopt_all_layers_df=pd.DataFrame(uopt_all_layers_array)
+        uopt_all_layers_df.to_csv('DataFiles/Data06_11_2020_Peristalsis_experiment_with_MPC_with_TOF/u_data_controller_for_all_layers_1.csv')   
         
-              
 except KeyboardInterrupt:
     print('Ctrl C Pressed')
-   
+  
 finally:
     RoSE_clear=RoSE_actuation_protocol(UseIOExpander=False)
     ClearDAC=np.zeros((1,12),dtype=int)
@@ -1321,49 +1361,48 @@ finally:
     f3 = plt.figure(num=3,figsize=(2.5, 1.5))
           
     ax7 = f3.add_subplot(311)
-    ax7.plot(HistoryDict['x_tof_filtered_1'],
+    ax7.plot(HistoryDict['x_adc_filtered_1'],
                 color='r',
                 linewidth=1.5,
                 linestyle='-',
                 label='')
     
     ax8 = f3.add_subplot(312)
-    ax8.plot(HistoryDict['x_tof_filtered_2'],
+    ax8.plot(HistoryDict['x_adc_filtered_2'],
                 color='g',
                 linewidth=1.5,
                 linestyle='-',
                 label='')
     
     ax9 = f3.add_subplot(313)
-    ax9.plot(HistoryDict['x_tof_filtered_3'],
+    ax9.plot(HistoryDict['x_adc_filtered_3'],
                 color='blue',
                 linewidth=1.5,
                 linestyle='-',
                 label='')
     
-    ax1.set_ylim(60, 80)
-    ax2.set_ylim(60, 80)
-    ax3.set_ylim(60, 80)
+    ax1.set_ylim(-10, 15)
+    ax2.set_ylim(-10, 15)
+    ax3.set_ylim(-10, 15)
     
     ax4.set_ylim(0, 60)
     ax5.set_ylim(0, 60)
     ax5.set_ylim(0, 60)
     
-    ax7.set_ylim(10, 40)
-    ax8.set_ylim(60, 100)
-    ax9.set_ylim(50, 80)
+    ax7.set_ylim(60, 75)
+    ax8.set_ylim(60, 75)
+    ax9.set_ylim(60, 75)
     
-    ax1.set_xlabel(r"Time", size=12)
-    ax1.set_ylabel(r"Population Size", size=12)
+    ax1.set_xlabel(r"Time steps", size=12)
+    ax1.set_ylabel(r"Amplitude (mm)", size=12)
     plt.show()
-    
+   
     #        # f1.savefig('Plots/MPC/MPC_N_'+str(i)+'.png', bbox_inches='tight',dpi=300)
 #        f2 = plt.figure(num=8,figsize=(2.5, 1.5))
 #        ax10 = f2.add_subplot(111)
 #        ax10.plot(xfilteredHistory)
 #        plt.show()
     
-
 
 #if __name__=='__main__':
 #    print('running within the module.\n')

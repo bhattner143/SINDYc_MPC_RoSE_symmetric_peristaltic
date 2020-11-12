@@ -199,9 +199,11 @@ class RoSE_actuation_protocol():
             port_ab_pins[ii].value = True
             TOF_sensor.append(vl6180x_calibration(i2c,
                                           new_address=VL6180X_NEW_I2C_ADDR[ii]))
-
-            TOF_sensor[ii].range_offset_cal_data_load()
-            TOF_sensor[ii].range_crosstalk_cal_data_load()
+            #Since we are using the first TOF for stent migration measurement so
+            #we are ignoring its calibration
+            if ii>0:
+                TOF_sensor[ii].range_offset_cal_data_load()
+                TOF_sensor[ii].range_crosstalk_cal_data_load()
 #            print(TOF_sensor[ii]._range_avg_range_and_signal_return_rate(5))
 #            print('Range status',TOF_cal.range_status)
                               
@@ -525,7 +527,7 @@ if __name__ == '__main__':
                 
         QSR_Two_layer=RoSE_actuation_protocol(UseIOExpander=True,UseADC=True)
         Flag_UseFSP=True
-        Peristalsis_filepath='PeristalsisData/60mmat20mmps_Dips.csv'
+        Peristalsis_filepath='PeristalsisData/40mmat20mmps_Dips.csv'
         #Peristalsis_filepath='PeristalsisData/Peristalsis_Staircase_50_10_130_20mmps.csv'
 #        Peristalsis_filepath='PeristalsisData/Peristalsis_Staircase_60_100_130_20mmps.csv'
         dfFlipped=QSR_Two_layer.PeristalsisFileRead(Peristalsis_filepath)

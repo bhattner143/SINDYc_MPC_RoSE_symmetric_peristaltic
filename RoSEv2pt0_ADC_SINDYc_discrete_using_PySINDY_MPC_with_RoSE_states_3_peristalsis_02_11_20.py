@@ -898,7 +898,6 @@ try:
     #    D = 0                          # Feedforward (none)
         
         Ton      = 10                  # Time when control starts
-        
         #Trajectory shaping parameters
         offset=66
         scale_fact=(74-offset)/(74-66)
@@ -912,7 +911,7 @@ try:
         xref_all2=np.array(xref_df_all2)[:,3:]
         xref_all3=np.array(xref_df_all3)[0:,3:]
         
-#        xref_all3=scale_fact*(xref_all3-66)+offset
+        xref_all3=scale_fact*(xref_all3-66)+offset
         
         xref0 = 0*np.ones((3,100))#int(Ton/Ts))) #Initial part of the reference where the control is off
 #        xref1 = xref_all[300:600,3:].T#2412:2542
@@ -957,13 +956,17 @@ try:
         num_rose_layers=12
         uopt_all_deque=deque(np.zeros(12).tolist())
         
-        #Filter Parameters
+        #Filter Parameters ADC
         numtaps_adc=10
         cutoff=0.4
         b_adc = signal.firwin(numtaps_adc, cutoff)
         z_adc = signal.lfilter_zi(b_adc, 1)
         z1=z2=z3=z_adc
         z_adc_packed=(z1,z2,z3)
+        
+        #Filter Parameters TOF
+        numtaps_tof=10
+        cutoff_tof=0.1
         
         #Initialize TOF 
         t1 = timedelta(minutes = 0, seconds = 0, microseconds=0)
@@ -976,7 +979,7 @@ try:
             range_mm_array=RoSEv2pt0_Obj_SINDYc_SI.GenerateDisplacementDataFromTOF(t1)
 
             #Design real-time filter
-            b,z=RoSE_actuation_protocol.Filter_RealTime_design(numtaps=5,cutoff=0.9)
+            b,z=RoSE_actuation_protocol.Filter_RealTime_design(numtaps=numtaps_tof,cutoff=cutoff_tof)
             z=(z,z,z,z,z,z,z,z,z,z)
             TOF2dArray_mean_filtered_stacked=np.array([[],[],[],[],[],[],[],[],[],[],[]]).T
             
@@ -1346,7 +1349,7 @@ finally:
     ax5.set_ylim(0, 60)
     ax5.set_ylim(0, 60)
     
-    ax7.set_ylim(0, 100)
+    ax7.set_ylim(10, 40)
     ax8.set_ylim(60, 100)
     ax9.set_ylim(50, 80)
     
