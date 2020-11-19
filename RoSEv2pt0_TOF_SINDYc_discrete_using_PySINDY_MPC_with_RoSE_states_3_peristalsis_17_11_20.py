@@ -731,15 +731,15 @@ class SINDYc_MPC_Design(SINDyBase,TOFandWebCam,RoSE_actuation_protocol):
         """
     
     # Cost calculation
-        # pdb.set_trace()
-        x,Ts,N,xref,u0,Q,R,Ru=args
+#        pdb.set_trace()
+        x,Ts,N,xref_all,u0,Q,R,Ru=args
         xk=x
 
         #Reshape the 1d array to to array
         u=u.reshape((3,-1))
         uk=u[:,0]
         J=0
-        
+        xref_k=xref_all[:,0]
         # Make the dimension of xk atleast 1
         if xk.ndim==0:
             xk = xk[np.newaxis]
@@ -761,7 +761,7 @@ class SINDYc_MPC_Design(SINDyBase,TOFandWebCam,RoSE_actuation_protocol):
             xk1_model = self.model.predict(xk_model, uk_model)
             xk1=xk1_model[0,:]
             #J+=np.matmul(np.matmul((xk1-xref).T,Q),(xk1-xref))
-            J+=(xk1-xref).T.dot(Q).dot((xk1-xref))
+            J+=(xk1-xref_k).T.dot(Q).dot((xk1-xref_k))
             
                 
             if kk==0:
@@ -777,6 +777,7 @@ class SINDYc_MPC_Design(SINDyBase,TOFandWebCam,RoSE_actuation_protocol):
             
             if kk<N-1:
                 uk=u[:,kk+1]
+                xref_k=xref_all[:,kk+1]
                 
                 
         return J  
@@ -890,8 +891,11 @@ try:
     # =============================================================================
     RoSEv2pt0_Obj_SINDYc_SI.DesignSINDYcModelForMPC(threshold_vec=np.array([0.008]))
 
+    #Performance evaluating parameters
+    perf_eval=np.array([[],[],[],[],[]]).T
+    
     # Choose prediction horizon over which the optimization is performed
-    Nvec=np.array([4])
+    Nvec=np.array([8,8,8,8,8])
     
     for i in range(Nvec.shape[0]):
         
@@ -932,12 +936,12 @@ try:
 #        xref1 = xref_all[300:600,3:].T#2412:2542
 #        xref2 = xref_all[1200:1500,3:].T
 #        xref3 = xref_all[2550:2850,3:].T
-        xref_traj=np.concatenate((xref0.T,xref_all1
+        xref_traj=np.concatenate((xref0.T,xref_all1[0:-N,:]
 #                                  xref_all2,
 #                                  xref_all3[0:629,:]
                                   )).T
         
-        assert xref_traj.shape[1] == int(Duration/Ts), 'size of xref_all must be equal to int(Duration/Ts)'
+        assert xref_traj.shape[1]+N == int(Duration/Ts), 'size of xref_all must be equal to int(Duration/Ts)'
         
         N_states=xref_traj.shape[0]
         
@@ -1006,95 +1010,83 @@ try:
         
         start_time=time.time()
         t_in=timedelta(minutes = 0, seconds = 0, microseconds=0)
+        
+        
     
         # =============================================================================
         # #MPC loop
         # =============================================================================
         
-        for ct in range(int(Duration/Ts)):
+        for ct in range(int(Duration/Ts)-2*N):
             
             if ct*Ts>30:   # Turn control on
                 
                 if ct*Ts==Ton+Ts:
                     print('Start Control.')
-            
+                
                 # Set references
                 #xref = np.asarray(xref1)
-                xref = xref_traj[:,ct-1]
+                xref = xref_traj[:,ct-1:ct-1+N]
                 uopt0=uopt[:,0]
                 uopt=uopt.flatten()
                 
 #                if ct*Ts==40:
 #                    pdb.set_trace()
                 ################################    
-                if xref[0]>=7.6:
+                if xref[0,0]>=7.6:
                     LB1=40 #Lower bound
                     UB1=46 #Upper bound
                     
-                elif xref[0]>=5.5 and xref[0]<7.6:
-                    LB1=32 #Lower bound
-                    UB1=40 #Upper bound
+#                elif xref[0,0]>=5.5 and xref[0,0]<7.6:
+#                    LB1=32 #Lower bound
+#                    UB1=40 #Upper bound
+#                    
+#                elif xref[0,0]>=2 and xref[0,0]<5.5:
+#                    LB1=24 #Lower bound
+#                    UB1=32 #Upper bound
                     
-                elif xref[0]>=2 and xref[0]<5.5:
-                    LB1=24 #Lower bound
-                    UB1=32 #Upper bound
-                    
-#                elif xref[0]>=0 and xref[0]<2:
-#                    LB1=26-2 #Lower bound
-#                    UB1=30 #Upper bound
                 else:
                     LB1=9
-                    UB1=17
+                    UB1=40#17
                 #########################    
-                if xref[1]>=8:
+                if xref[1,0]>=8:
                     LB2=42 #Lower bound
                     UB2=46 #Upper bound
                     
-                elif xref[1]>=5.5 and xref[1]<8:
-                    LB2=34 #Lower bound
-                    UB2=40 #Upper bound
-                elif xref[1]>=2 and xref[1]<5.5:
-                    LB2=26 #Lower bound
-                    UB2=32  #Upper bound
+#                elif xref[1,0]>=5.5 and xref[1,0]<8:
+#                    LB2=34 #Lower bound
+#                    UB2=40 #Upper bound
+#                elif xref[1,0]>=2 and xref[1,0]<5.5:
+#                    LB2=26 #Lower bound
+#                    UB2=32  #Upper bound
                     
-#                elif xref[1]>=66 and xref[1]<68:
-#                    LB2=22 #Lower bound
-#                    UB2=25  #Upper bound
+
                 else:
                     LB2=9
-                    UB2=17
+                    UB2=40#17
                  ###################################  
-                if xref[2]>=7.5:
+                if xref[2,0]>=7.5:
                     LB3=42 #Lower bound
                     UB3=46 #Upper bound                    
-                elif xref[2]>=6.5 and xref[2]<7.5:
-                    LB3=34 #Lower bound
-                    UB3=38 #Upper bound
-                elif xref[2]>=5 and xref[2]<6.5:
-                    LB3=32 #Lower bound
-                    UB3=34 #Upper bound
-                elif xref[2]>=4 and xref[2]<5:
-                    LB3=26 #Lower bound
-                    UB3=30 #Upper bound
+#                elif xref[2,0]>=6.5 and xref[2,0]<7.5:
+#                    LB3=34 #Lower bound
+#                    UB3=38 #Upper bound
+#                elif xref[2,0]>=5 and xref[2,0]<6.5:
+#                    LB3=32 #Lower bound
+#                    UB3=34 #Upper bound
+#                elif xref[2,0]>=4 and xref[2,0]<5:
+#                    LB3=26 #Lower bound
+#                    UB3=30 #Upper bound
                 else:
                     LB3=9
-                    UB3=17
+                    UB3=42#17
             
+                
+                boundsopt=[(LB1,UB1),(LB2,UB2),(LB3,UB3)]
+
+                boundsopt=[boundsopt[ii] for ii in range(0,N_states) for jj in range(0,N)]
                     
-                if N==1:
-                    boundsopt=[(LB1,UB1),(LB2,UB2),(LB3,UB3)]
-                    
-                    
-                elif N>1:     
-                    boundsopt=[(LB1,UB1),(LB1,UB1),(LB1,UB1),(LB1,UB1),
-                                (LB2,UB2),(LB2,UB2),(LB2,UB2),(LB2,UB2),
-                                (LB3,UB3),(LB3,UB3),(LB3,UB3),(LB3,UB3)]
-                    # boundsopt=[(40,120),(40,120),(40,120),(40,120),
-                    #            (40,120),(40,120),(40,120),(40,120),
-                    #            (40,120),(40,120),(40,120),(40,120)]
-                    
-                    
-                    
+#                
                 obj=RoSEv2pt0_Obj_SINDYc_SI
                 
                 uopt=minimize(obj.RobotObjectiveFCN,
@@ -1220,8 +1212,8 @@ try:
             
             x_tof_filtered=np.array([sf1,sf2,sf3])*(x_tof_filtered-np.array([23,73,69]))+np.array([1,0,1])
             #Additional offset tuning
-            x_tof_filtered[:,0]=x_tof_filtered[:,0]+1.6+2.2
-            x_tof_filtered[:,1]=x_tof_filtered[:,1]-3
+            x_tof_filtered[:,0]=x_tof_filtered[:,0]+1.6+2.2+1
+            x_tof_filtered[:,1]=x_tof_filtered[:,1]-3+2
             x_tof_filtered[:,2]=x_tof_filtered[:,2]-2.7
             
             x=x_tof_filtered
@@ -1237,8 +1229,21 @@ try:
                                                   uopt_all_layers[:,np.newaxis].T))
             #Stent displacement history
             d_stentHistory=np.concatenate((d_stentHistory,d_stent))
-        print("--- %s seconds ---" % (time.time() - start_time))
             
+        exec_time=time.time() - start_time
+        print("--- %s seconds ---" % (exec_time))
+         
+        
+        # =============================================================================
+        #   NRMSE      
+        # =============================================================================
+        error_rmse_tracking=np.sqrt(np.sum((xHistory[:,0:]-xref_traj[0:,0:xHistory[:,0].shape[0]].T)**2,axis=0)/\
+        xHistory[:,0].shape[0])
+        print("Tracking error-->",  error_rmse_tracking)
+        
+        perf_eval=np.concatenate((perf_eval,np.array([[N,exec_time,error_rmse_tracking[0],
+                  error_rmse_tracking[1],
+                  error_rmse_tracking[2]]])))
         # =============================================================================
          # Create a Dicionary for storing the data history
          # =============================================================================
@@ -1275,14 +1280,16 @@ try:
 #                  'x_adc_all_raw_History_12':x_adc_all_raw_History[:,11],
                         }
         
-        History_df = pd.DataFrame(HistoryDict) 
-        History_df.to_csv('DataFiles/Data06_11_2020_Peristalsis_experiment_with_MPC_with_TOF/data_controller_1.csv')
+#        History_df = pd.DataFrame(HistoryDict) 
+#        History_df.to_csv('DataFiles/Data06_11_2020_Peristalsis_experiment_with_MPC_with_TOF/data_controller_1.csv')
         
         #              'JHistory':funval}
         
-        uopt_all_layers_df=pd.DataFrame(uopt_all_layers_array)
-        uopt_all_layers_df.to_csv('DataFiles/Data06_11_2020_Peristalsis_experiment_with_MPC_with_TOF/u_data_controller_for_all_layers_1.csv')   
-        
+#        uopt_all_layers_df=pd.DataFrame(uopt_all_layers_array)
+#        uopt_all_layers_df.to_csv('DataFiles/Data06_11_2020_Peristalsis_experiment_with_MPC_with_TOF/u_data_controller_for_all_layers_1.csv')   
+#        MPC_performance_evaluat_files 
+        perf_eval_df=pd.DataFrame(perf_eval)
+        perf_eval_df.to_csv('DataFiles/MPC_performance_evaluat_files/Performance_data_2')
 except KeyboardInterrupt:
     print('Ctrl C Pressed')
   

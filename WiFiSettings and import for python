@@ -1,0 +1,33 @@
+network={
+	ssid="UoA-WiFi"
+	key_mgmt=WPA-EAP
+	identity="dbha483"
+	password="jqic9iman"
+}
+# wifi enabled
+sudo dhcpcd -4
+
+Install Miniconda
+wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-armv7l.sh
+sudo md5sum Miniconda3-latest-Linux-armv7l.sh # (optional) check md5
+sudo /bin/bash Miniconda3-latest-Linux-armv7l.sh # -> change default directory to /home/pi/miniconda3
+sudo nano /home/pi/.bashrc # -> add: export PATH="/home/pi/miniconda3/bin:$PATH"
+sudo reboot -h now
+
+
+INSTALLATION
+
+sudo pip3 install pandas
+sudo pip3 install matplotlib
+sudo pip3 install adafruit-circuitpython-mcp3xxx
+sudo pip3 install adafruit-circuitpython-mcp230xx
+sudo pip3 install seaborn
+sudo pip3 install sklearn
+sudo pip3 install statsmodels
+
+
+location of circuitpthon lib
+/usr/local/lib/python3.7/dist-packages
+
+if error
+
