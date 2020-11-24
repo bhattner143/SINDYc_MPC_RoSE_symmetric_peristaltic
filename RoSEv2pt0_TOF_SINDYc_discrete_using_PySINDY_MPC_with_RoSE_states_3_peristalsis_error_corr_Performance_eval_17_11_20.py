@@ -77,6 +77,7 @@ class SINDYc_MPC_Design(SINDyBase,TOFandWebCam,RoSE_actuation_protocol):
 #        self.path = path
         self.SystemName = SystemName_MPC
         self.DataDictionary={}
+        global xk1_store
     
     #Lotka-Voltera System with input    
     @staticmethod
@@ -714,8 +715,9 @@ class SINDYc_MPC_Design(SINDyBase,TOFandWebCam,RoSE_actuation_protocol):
         # =============================================================================
     #     Cost function of nonlinear MPC for Lotka-Volterra system
     # =============================================================================
-    def RobotObjectiveFCN(self,u,*args):
     
+    def RobotObjectiveFCN(self,u,*args):
+        
     ## 
         """
          Inputs:
@@ -736,16 +738,21 @@ class SINDYc_MPC_Design(SINDyBase,TOFandWebCam,RoSE_actuation_protocol):
         xk=x
 
         #Reshape the 1d array to to array
+        if u.ndim==1:
+            u=np.array([u]).T
         u=u.reshape((3,-1))
         uk=u[:,0]
         J=0
         xref_k=xref_all[:,0]
+        
+        
         # Make the dimension of xk atleast 1
         if xk.ndim==0:
             xk = xk[np.newaxis]
             
-        # if uk.ndim==0:
-        #     uk=
+        sf1=1#=0.62#+0.1
+        sf2=1#0.62#+0.05
+        sf3=0.5#0.27+0.05
         
     #    Loop through each prediction step
         for kk in range(N):
@@ -760,8 +767,19 @@ class SINDYc_MPC_Design(SINDyBase,TOFandWebCam,RoSE_actuation_protocol):
             assert xk_model.shape[0]==uk_model.shape[0]==1, 'size of xk_model[0] and uk_model[0] must be same'
             xk1_model = self.model.predict(xk_model, uk_model)
             xk1=xk1_model[0,:]
+            
+            
+            
+            xk1_cal=np.array([sf1,sf2,sf3])*(xk1-np.array([23,73,69]))+np.array([1,0,1])
+            #Additional offset tuning
+            xk1_cal[0]=xk1[0]+1.6+2.2+1
+            xk1_cal[1]=xk1[1]-3+2
+            xk1_cal[2]=xk1[2]-2.7
+            
+            xk1_cal=xk1
             #J+=np.matmul(np.matmul((xk1-xref).T,Q),(xk1-xref))
-            J+=(xk1-xref_k).T.dot(Q).dot((xk1-xref_k))
+            J+=(xk1_cal-xref_k).T.dot(Q).dot((xk1_cal-xref_k))
+#            
             
                 
             if kk==0:
@@ -778,9 +796,87 @@ class SINDYc_MPC_Design(SINDyBase,TOFandWebCam,RoSE_actuation_protocol):
             if kk<N-1:
                 uk=u[:,kk+1]
                 xref_k=xref_all[:,kk+1]
+#            xk1_store=np.concatenate((xk1_store,np.array([xk1])))
+                
+#        pdb.set_trace()        
+#        f0 = plt.figure(num=10,figsize=(2.5, 1.5))
+#        ax1 = f0.add_subplot(311)
+#
+#        ax1.plot(xk1_store[:,1],
+#        color='red',
+#        linewidth=1.5,
+#        linestyle='-')
+            
                 
                 
-        return J  
+        return J 
+    
+    def RobotObjectiveFCNCallBack(self,u,*args):
+#        pdb.set_trace()
+#        print(args)
+        x,Ts,N,xref_all,u0,Q,R,Ru=args[0]
+        xk=x
+
+        #Reshape the 1d array to to array
+        u=u.reshape((3,-1))
+        uk=u[:,0]
+        J=0
+        xref_k=xref_all[:,0]
+        
+        
+        # Make the dimension of xk atleast 1
+        if xk.ndim==0:
+            xk = xk[np.newaxis]
+            
+        sf1=1#=0.62#+0.1
+        sf2=1#0.62#+0.05
+        sf3=0.5#0.27+0.05
+        
+    #    Loop through each prediction step
+        for kk in range(N):
+    #        Obtain plant state at next prediction step
+            if xk.ndim==1:
+                    xk_model=xk[:,np.newaxis] .T
+            else:
+                    xk_model=xk
+            
+            uk_model=uk
+            uk_model=uk_model[:,np.newaxis] .T
+            assert xk_model.shape[0]==uk_model.shape[0]==1, 'size of xk_model[0] and uk_model[0] must be same'
+            xk1_model = self.model.predict(xk_model, uk_model)
+            xk1=xk1_model[0,:]
+            
+            
+            
+            xk1_cal=np.array([sf1,sf2,sf3])*(xk1-np.array([23,73,69]))+np.array([1,0,1])
+            #Additional offset tuning
+            xk1_cal[0]=xk1[0]+1.6+2.2+1
+            xk1_cal[1]=xk1[1]-3+2
+            xk1_cal[2]=xk1[2]-2.7
+            
+            #xk1_cal=xk1
+            #J+=np.matmul(np.matmul((xk1-xref).T,Q),(xk1-xref))
+            J+=(xk1_cal-xref_k).T.dot(Q).dot((xk1_cal-xref_k))
+#            
+            
+                
+            if kk==0:
+                J+=np.dot(np.dot((uk-u0).T,R),(uk-u0))+np.dot(np.dot(uk.T,Ru),uk)
+                
+#                (uk-u0).T.dot(R).dot((uk-u0))+np.dot(np.dot(uk.T,Ru),uk)
+            else:
+                J+=np.dot(np.dot((uk-u[:,kk-1]).T,R),(uk-u[:,kk-1]))+np.dot(np.dot(uk.T,Ru),uk)
+                
+            # Update xk and uk for the next prediction step
+            
+            xk=xk1
+            
+            if kk<N-1:
+                uk=u[:,kk+1]
+                xref_k=xref_all[:,kk+1]
+#            xk1_store=np.concatenate((xk1_store,np.array([xk1])))
+        return xk  
+    
     
 # =============================================================================
 # Constraint function of nonlinear MPC for Lotka-Volterra system
@@ -870,7 +966,7 @@ plt.close("all")
 #Main function: MPC Loop
 # =============================================================================
 #def main():
-    
+   
 try:
     
     # =============================================================================
@@ -895,7 +991,7 @@ try:
     perf_eval=np.array([[],[],[],[],[]]).T
     
     # Choose prediction horizon over which the optimization is performed
-    Nvec=np.array([8,8,8,8,8])
+    Nvec=np.array([4])
     
     for i in range(Nvec.shape[0]):
         
@@ -1016,7 +1112,7 @@ try:
         # =============================================================================
         # #MPC loop
         # =============================================================================
-        
+        xk_store=np.array([[],[],[]]).T
         for ct in range(int(Duration/Ts)-2*N):
             
             if ct*Ts>30:   # Turn control on
@@ -1092,20 +1188,39 @@ try:
                 uopt=minimize(obj.RobotObjectiveFCN,
                               uopt,
                               method='SLSQP',
-                              args=(x,Ts,N,xref,uopt0,np.diag(Q),np.diag(R),np.diag(Ru)),
+                              args=(x,Ts,N,xref,
+                                    uopt0,
+                                    np.diag(Q),
+                                    np.diag(R),
+                                    np.diag(Ru)),
                               tol=0.1,
                               options={'ftol': 0.1, 'disp': False},
+                              
                               # constraints=cons,
                               bounds=boundsopt
                               )
                 # pdb.set_trace()                
-                
+                #print(callback)
                 funval[ct]=uopt.fun
+                
+                #xk_store=
                 
                 if np.absolute(x.any())>12:
                     break
                 
                 uopt=uopt.x
+                
+                args=(x,Ts,N,xref,
+                                    uopt0,
+                                    np.diag(Q),
+                                    np.diag(R),
+                                    np.diag(Ru))
+                xk_callback=obj.RobotObjectiveFCNCallBack(uopt,args)
+                
+                #Calling back the callback function for evaluating model prediction
+                xk_store=np.concatenate((xk_store,
+                                         np.array([xk_callback])))
+                
                 
                 uopt=uopt.reshape((3,-1))
                 
@@ -1201,11 +1316,14 @@ try:
             x_tof=np.array([range_mm_array[[5,6,7]]])
             x_tof_filtered=np.array([range_mm_array_filtered[[5,6,7]]])
             
+            
+            
             d_stent=np.array([range_mm_array[[1]]])
             
             # =============================================================================
             # Applying TOF calibration obtained form WEbcam
             # =============================================================================
+            x=x_tof_filtered
             sf1=1#=0.62#+0.1
             sf2=1#0.62#+0.05
             sf3=0.5#0.27+0.05
