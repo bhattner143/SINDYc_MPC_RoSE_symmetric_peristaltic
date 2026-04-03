@@ -227,8 +227,8 @@ def TVRegDiff(data, itern, alph, u0=None, scale='small', ep=1e-6, dx=None,
 
             if diagflag:
                 [s, info_i] = sparse.linalg.cg(
-                    linop, g, x0=None, tol=tol, maxiter=maxit, callback=None,
-                    M=P, atol='legacy')
+                    linop, g, x0=None, rtol=tol, maxiter=maxit, callback=None,
+                    M=P, atol=0.0)
                 log_iteration(ii, s[0], u, g)
                 if (info_i > 0):
                     
@@ -239,8 +239,8 @@ def TVRegDiff(data, itern, alph, u0=None, scale='small', ep=1e-6, dx=None,
                     logging.warning("WARNING - illegal input or breakdown")
             else:
                 [s, info_i] = sparse.linalg.cg(
-                    linop, g, x0=None, tol=tol, maxiter=maxit, callback=None,
-                    M=P, atol='legacy')
+                    linop, g, x0=None, rtol=tol, maxiter=maxit, callback=None,
+                    M=P, atol=0.0)
             # Update solution.
             u = u - s
             # Display plot.
@@ -295,8 +295,8 @@ def TVRegDiff(data, itern, alph, u0=None, scale='small', ep=1e-6, dx=None,
 
             if diagflag:
                 [s, info_i] = sparse.linalg.cg(
-                    linop, -g, x0=None, tol=tol, maxiter=maxit, callback=None,
-                    M=np.dot(R.transpose(), R), atol='legacy')
+                    linop, -g, x0=None, rtol=tol, maxiter=maxit, callback=None,
+                    M=np.dot(R.transpose(), R), atol=0.0)
                 log_iteration(ii, s[0], u, g)
                 if (info_i > 0):
                     logging.warning(
@@ -306,8 +306,8 @@ def TVRegDiff(data, itern, alph, u0=None, scale='small', ep=1e-6, dx=None,
 
             else:
                 [s, info_i] = sparse.linalg.cg(
-                    linop, -g, x0=None, tol=tol, maxiter=maxit, callback=None,
-                    M = np.dot(R.transpose(), R), atol='legacy')
+                    linop, -g, x0=None, rtol=tol, maxiter=maxit, callback=None,
+                    M = np.dot(R.transpose(), R), atol=0.0)
             # Update current solution
             u = u + s
             # Display plot
